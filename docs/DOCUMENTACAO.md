@@ -95,7 +95,7 @@ milhares de usuários.
 
 ## 2. Escolha dos Algoritmos
 
-> O enunciado pede **no mínimo dois algoritmos**. Implementamos **três**,
+> O enunciado pede **no mínimo dois algoritmos**. Implementamos **quatro**,
 > cada um resolvendo uma parte distinta do problema, e todos foram
 > implementados **do zero** (não usamos `HashMap`, `Collections.sort`
 > ou bibliotecas de grafo prontas).
@@ -217,7 +217,51 @@ memória significativo** — perfeito para o nosso caso.
 
 ---
 
-### Como os três trabalham juntos (pipeline do match)
+### Algoritmo 4 — Dijkstra (caminho mínimo em grafo ponderado)
+
+**O que ele resolve neste sistema?**
+Depois que o usuário escolhe uma carona, calculamos o **melhor trajeto**
+da corrida — motorista → passageiro → UFERSA — passando pelos bairros
+mais próximos. É o que o frontend desenha no mapa.
+
+**Como ele faz, em etapas:**
+1. Inicializa a distância de todos os bairros como **infinito**, exceto
+   a origem (0).
+2. Coloca a origem em uma **fila de prioridade** (min-heap) ordenada
+   pela menor distância.
+3. Enquanto a fila não estiver vazia:
+   - Pega o bairro com **menor distância acumulada**.
+   - Para cada vizinho desse bairro, calcula a nova distância e atualiza
+     se for melhor que a conhecida.
+4. Quando chega ao destino, reconstrói o caminho mais curto via
+   estrutura de "anteriores".
+
+Operamos sobre um **GrafoPonderado** (lista de adjacência com pesos),
+onde as arestas têm peso em **km calculados via fórmula de Haversine**
+entre as coordenadas reais dos bairros de Mossoró/RN.
+
+**Big-O:**
+
+| Implementação                                | Complexidade        |
+|----------------------------------------------|---------------------|
+| **Com fila de prioridade (heap binário)**    | **O((V + E) log V)** |
+| Sem heap (busca linear pelo próximo)         | O(V²)               |
+
+Como a malha de bairros é pequena (~14 nós), o cálculo é instantâneo.
+
+**Por que foi escolhido?**
+Dijkstra é o algoritmo clássico para "menor caminho" em grafos com
+pesos não-negativos. Comparado a BFS comum (que ignora pesos),
+Dijkstra considera **distâncias reais** — então o trajeto sugerido
+não é só "menos paradas", é **menos quilômetros**.
+
+**Onde fica no código?**
+`backend/src/main/java/com/ufersa/caronas/structures/Dijkstra.java`
+`backend/src/main/java/com/ufersa/caronas/structures/GrafoPonderado.java`
+
+---
+
+### Como os quatro trabalham juntos (pipeline do match)
 
 Quando o usuário clica em **Buscar carona**, acontece o seguinte:
 
@@ -240,11 +284,17 @@ Quando o usuário clica em **Buscar carona**, acontece o seguinte:
 ├─────────────────────────────────────────────────────────────┤
 │ 4. QUICKSORT:                                               │
 │    Ordena por score decrescente → resposta ao usuário.      │
+├─────────────────────────────────────────────────────────────┤
+│ 5. DIJKSTRA (quando o usuário clica em "Ver trajeto"):      │
+│    Calcula o caminho mínimo                                 │
+│    motorista → passageiro → UFERSA                          │
+│    no grafo ponderado de bairros e desenha no mapa.         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Complexidade total amortizada: **O(V + E + k log k)**, onde
-*k* é o número de matches finais — extremamente eficiente.
+Complexidade total amortizada: **O(V + E + k log k + (V+E) log V)**
+— a busca dos matches mais o cálculo do trajeto continuam viáveis
+mesmo com milhares de usuários.
 
 ---
 
@@ -350,7 +400,9 @@ Três estruturas trabalham em pipeline:
 
 O sistema atende aos quatro critérios da A3:
 identifica um problema real e socialmente relevante, escolhe e
-justifica **três algoritmos** (mais do que o mínimo exigido) com
-suas respectivas complexidades, entrega um **produto funcional**
-acessível via interface web, e tem um material de apresentação que
-demonstra **claramente o ganho** sobre a solução ingênua.
+justifica **quatro algoritmos** (Hash, Grafo, QuickSort e Dijkstra —
+duas vezes o mínimo exigido) com suas respectivas complexidades,
+entrega um **produto funcional** acessível via interface web
+(com mapa interativo OpenStreetMap mostrando o trajeto calculado),
+e tem um material de apresentação que demonstra **claramente o ganho**
+sobre a solução ingênua.

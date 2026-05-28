@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Caronas UFERSA — Match inteligente de caronas universitárias</title>
-  <meta name="description" content="Sistema de match para caronas universitárias usando Tabela Hash, Grafo e QuickSort. Projeto A3 — Estruturas de Dados." />
+  <title>Carona Universidades — Match inteligente de caronas universitárias</title>
+  <meta name="description" content="Sistema de match para caronas universitárias usando Tabela Hash, Grafo, QuickSort e Dijkstra. Projeto A3 — Estruturas de Dados." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,7 +25,7 @@
     <div class="topbar__inner">
       <a href="#" class="brand">
         <span class="brand__mark">◐</span>
-        <span class="brand__name">Caronas <em>UFERSA</em></span>
+        <span class="brand__name">Carona <em>Universidades</em></span>
       </a>
       <nav class="nav">
         <a href="#cadastro" data-nav>Cadastro</a>
@@ -50,14 +50,15 @@
 
       <h1 class="hero__title">
         <span class="line"><em>Vai</em> pra</span>
-        <span class="line">UFERSA?</span>
+        <span class="line">universidade?</span>
         <span class="line subline">Encontre quem vai com você.</span>
       </h1>
 
       <p class="hero__lead">
-        Acabou de procurar carona em grupo de WhatsApp lotado.
-        Cadastre sua rota, e o algoritmo encontra estudantes do
-        <strong>seu bairro</strong>, no <strong>seu horário</strong>,
+        UFERSA, UERN, IFRN — pra onde for. Acabou de procurar carona
+        em grupo de WhatsApp lotado. Cadastre sua rota, e o algoritmo
+        encontra estudantes do <strong>seu bairro</strong>, na
+        <strong>sua universidade</strong>, no <strong>seu horário</strong>,
         ordenados pelo melhor match.
       </p>
 
@@ -116,7 +117,7 @@
         </label>
         <label class="field">
           <span>Universidade</span>
-          <input name="universidade" value="UFERSA" required />
+          <select name="universidade" id="selectUniversidadeUsuario" required></select>
         </label>
       </div>
 
@@ -192,8 +193,8 @@
           <select name="bairroOrigem" id="selectBairroOrigem" required></select>
         </label>
         <label class="field">
-          <span>Destino</span>
-          <input name="destino" value="UFERSA" required />
+          <span>Universidade (destino)</span>
+          <select name="destino" id="selectDestinoRota" required></select>
         </label>
       </div>
 
@@ -246,8 +247,8 @@
           <input name="horario" type="time" required value="07:00" />
         </label>
         <label class="field field--grow">
-          <span>Destino</span>
-          <input name="destino" value="UFERSA" />
+          <span>Universidade (destino)</span>
+          <select name="destino" id="selectDestinoBusca"></select>
         </label>
         <button type="submit" class="btn btn--primary btn--inline">Buscar</button>
       </form>
@@ -359,12 +360,12 @@
   <footer class="footer">
     <div class="footer__inner">
       <p>
-        <strong>Caronas UFERSA</strong> · Projeto A3 — Estruturas de Dados
+        <strong>Carona Universidades</strong> · Projeto A3 — Estruturas de Dados
         e Análise de Algoritmos.
       </p>
       <p class="footer__small">
-        Tabela Hash · Grafo · QuickSort — implementações próprias, sem usar
-        <code>HashMap</code> ou <code>Collections.sort()</code>.
+        Tabela Hash · Grafo · QuickSort · Dijkstra — implementações próprias,
+        sem usar <code>HashMap</code> ou <code>Collections.sort()</code>.
       </p>
     </div>
   </footer>

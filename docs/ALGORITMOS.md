@@ -283,7 +283,110 @@ drasticamente a chance de cair no pior caso O(n²).
 
 ---
 
-## 4. Como os três se integram
+## 4. Dijkstra (Caminho Mínimo em Grafo Ponderado)
+
+### Problema
+
+> "Dado um motorista no bairro X, um passageiro no bairro Y, e o
+> destino UFERSA — qual o melhor trajeto (menor distância) passando
+> por bairros vizinhos?"
+
+### Como funciona
+
+Dijkstra é o algoritmo clássico para **menor caminho** em grafos com
+pesos não-negativos. Ele mantém um conjunto de bairros "finalizados"
+(com distância mínima conhecida) e expande progressivamente para os
+vizinhos com menor distância acumulada.
+
+### Estrutura sobre a qual opera
+
+Criamos uma classe `GrafoPonderado<T>` (também própria,
+em `structures/GrafoPonderado.java`). Diferente do `Grafo<T>` usado
+para compatibilidade entre usuários (sem peso), aqui as arestas têm
+um peso — no nosso caso, a **distância em km entre dois bairros**,
+calculada via fórmula de Haversine sobre as coordenadas geográficas
+reais de Mossoró/RN.
+
+### Pseudocódigo
+
+```
+função dijkstra(grafo, origem, destino):
+    dist[v] = infinito para todo v
+    dist[origem] = 0
+    anterior[v] = null para todo v
+    heap = min-heap por dist[v]
+    heap.add(origem)
+
+    enquanto heap não está vazia:
+        u = heap.remove()                    # bairro com menor dist atual
+        se u já finalizado: continue
+        finaliza(u)
+        se u == destino: pare
+
+        para cada aresta (u → v, peso) em grafo.arestas(u):
+            nova = dist[u] + peso
+            se nova < dist[v]:
+                dist[v] = nova
+                anterior[v] = u
+                heap.add(v)                  # re-enfileira com prioridade nova
+
+    # reconstroi o caminho de destino até origem usando anterior[]
+    caminho = []
+    nó = destino
+    enquanto nó != null:
+        caminho.adiciona(nó)
+        nó = anterior[nó]
+    retornar reverse(caminho), dist[destino]
+```
+
+### Big-O
+
+| Implementação                              | Complexidade        |
+|--------------------------------------------|---------------------|
+| Sem heap (busca linear)                    | O(V²)               |
+| **Com heap binário (PriorityQueue)**       | **O((V + E) log V)** |
+| Com heap de Fibonacci                      | O(E + V log V)      |
+
+Usamos a versão com **heap binário** (a classe `PriorityQueue` do
+JDK é usada apenas como min-heap genérico — o algoritmo em si é
+nosso). Para nossa malha de 14 bairros e ~22 arestas, o cálculo é
+instantâneo.
+
+### Por que escolhemos
+
+- **Foco em distância real:** BFS comum acharia o caminho com **menos
+  bairros**, mas Dijkstra acha o caminho com **menos quilômetros** —
+  é o que importa para o usuário.
+- **Pesos não-negativos:** distâncias geográficas nunca são negativas,
+  então Dijkstra é a escolha correta (vs. Bellman-Ford, que aceita
+  pesos negativos com custo maior).
+- **Aplicação clássica:** todo aplicativo de mapas (Google Maps, Waze,
+  Uber) usa variantes de Dijkstra/A*. Mostrar isso na A3 conecta a
+  teoria à prática profissional.
+
+### Aplicação no sistema
+
+Quando o usuário clica em **"Ver trajeto no mapa"** sobre um match:
+
+1. O backend executa **dois Dijkstras**:
+   - Perna 1: bairro do motorista → bairro do passageiro
+   - Perna 2: bairro do passageiro → UFERSA
+2. Junta os dois caminhos (sem duplicar o ponto de pickup).
+3. Calcula distância total (Haversine de cada segmento) e
+   tempo estimado (30 km/h área urbana).
+4. Retorna ao frontend a sequência de bairros + coordenadas + métricas.
+5. O frontend desenha no **mapa Leaflet** com tiles OpenStreetMap;
+   tenta enriquecer com **rota real nas ruas via OSRM** (e cai para
+   linhas retas se OSRM estiver indisponível).
+
+### Onde está
+
+- `backend/src/main/java/com/ufersa/caronas/structures/Dijkstra.java`
+- `backend/src/main/java/com/ufersa/caronas/structures/GrafoPonderado.java`
+
+---
+
+## 5. Como os quatro se integram
 
 Pipeline completo de uma busca de carona:
 

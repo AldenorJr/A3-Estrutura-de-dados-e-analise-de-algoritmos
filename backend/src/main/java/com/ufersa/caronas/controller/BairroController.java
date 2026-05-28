@@ -10,7 +10,6 @@ import java.util.Collections;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/bairros")
 public class BairroController {
 
     private final BairroService bairroService;
@@ -19,10 +18,15 @@ public class BairroController {
         this.bairroService = bairroService;
     }
 
-    @GetMapping
-    public List<String> listar() {
+    @GetMapping("/api/bairros")
+    public List<String> listarBairros() {
         List<String> lista = new ArrayList<>(bairroService.todosBairros());
         Collections.sort(lista);
         return lista;
+    }
+
+    @GetMapping("/api/universidades")
+    public List<String> listarUniversidades() {
+        return new ArrayList<>(bairroService.universidades());
     }
 }

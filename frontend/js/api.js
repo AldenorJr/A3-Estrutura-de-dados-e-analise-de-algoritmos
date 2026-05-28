@@ -24,6 +24,7 @@
 
   window.api = {
     listarBairros: () => request("/api/bairros"),
+    listarUniversidades: () => request("/api/universidades"),
 
     listarUsuarios: () => request("/api/usuarios"),
     criarUsuario:   (u) => request("/api/usuarios", { method: "POST", body: JSON.stringify(u) }),

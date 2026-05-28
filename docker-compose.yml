@@ -1,0 +1,52 @@
+# ============================================================
+# Carona Universidades — Projeto A3
+# Sobe backend (Spring Boot) + frontend (nginx) em um comando:
+#
+#   docker compose up -d
+#
+# Acessos:
+#   Frontend: http://localhost:5500
+#   Backend:  http://localhost:8080
+# ============================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: carona-universidades-backend:latest
+    container_name: carona-backend
+    ports:
+      - "8080:8080"
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx512m"
+    # Healthcheck via bash /dev/tcp - sem precisar de curl no container.
+    # Verifica se a porta 8080 esta aceitando conexoes TCP.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 8
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - carona-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: carona-universidades-frontend:latest
+    container_name: carona-frontend
+    ports:
+      - "5500:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - carona-net
+
+networks:
+  carona-net:
+    driver: bridge
