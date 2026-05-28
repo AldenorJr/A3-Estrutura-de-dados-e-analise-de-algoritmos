@@ -49,7 +49,11 @@ public class TrajetoriaService {
 
         String origemMotorista = rota.getBairroOrigem();
         String origemPassageiro = passageiro.getBairro();
-        String destino = BairroService.DESTINO_UFERSA;
+        // Destino da rota (UFERSA, UERN, IFRN...). Se nao houver coordenada
+        // pra ele, cai para UFERSA como fallback.
+        String destino = rota.getDestino() != null && bairroService.coordenadaDe(rota.getDestino()) != null
+                ? rota.getDestino()
+                : BairroService.DESTINO_UFERSA;
 
         // === Dijkstra perna 1: motorista -> passageiro ===
         Dijkstra.Resultado<String> perna1 = bairroService.melhorTrajeto(origemMotorista, origemPassageiro);

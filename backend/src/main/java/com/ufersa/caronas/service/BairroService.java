@@ -24,8 +24,12 @@ import java.util.Set;
 @Service
 public class BairroService {
 
-    /** Bairro especial: o destino. Tratado como um "no" do grafo. */
+    /** Universidade padrao (Mossoro/RN). Usada como default quando rota nao tem destino. */
     public static final String DESTINO_UFERSA = "UFERSA";
+
+    /** Universidades suportadas (sao tratadas como "nos" do grafo de bairros). */
+    public static final Set<String> UNIVERSIDADES = new java.util.LinkedHashSet<>(
+            java.util.Arrays.asList("UFERSA", "UERN", "IFRN"));
 
     private final Map<String, Coordenada> coordenadas = new LinkedHashMap<>();
     private final Map<String, Set<String>> bairrosProximos = new HashMap<>();
@@ -47,11 +51,13 @@ public class BairroService {
         coord("Presidente Costa e Silva",-5.2147, -37.3392);
         coord("Boa Vista",               -5.1933, -37.3056);
         coord("Bom Jesus",               -5.1825, -37.3056);
-        coord(DESTINO_UFERSA,            -5.2030, -37.3261);
 
-        // ===== Vizinhanca + pesos (km aproximados) =====
-        // Distancias estimadas pela formula de Haversine entre as coords;
-        // usadas como peso "real" do grafo ponderado.
+        // ===== Universidades (destinos) =====
+        coord("UFERSA",                  -5.2030, -37.3261);  // Costa e Silva
+        coord("UERN",                    -5.1953, -37.3473);  // Costa e Silva / Centro
+        coord("IFRN",                    -5.1909, -37.3522);  // Nova Betania (Campus Mossoro)
+
+        // ===== Vizinhanca bairro-a-bairro =====
         conectar("Centro", "Nova Betania");
         conectar("Centro", "Alto de Sao Manoel");
         conectar("Centro", "Doze Anos");
@@ -60,7 +66,6 @@ public class BairroService {
         conectar("Bom Jardim", "Aeroporto");
         conectar("Bom Jardim", "Santo Antonio");
         conectar("Aeroporto", "Costa e Silva");
-        conectar("Aeroporto", DESTINO_UFERSA);
         conectar("Alto de Sao Manoel", "Doze Anos");
         conectar("Alto de Sao Manoel", "Abolicao");
         conectar("Abolicao", "Doze Anos");
@@ -68,12 +73,27 @@ public class BairroService {
         conectar("Belo Horizonte", "Santo Antonio");
         conectar("Santo Antonio", "Presidente Costa e Silva");
         conectar("Costa e Silva", "Presidente Costa e Silva");
-        conectar("Costa e Silva", DESTINO_UFERSA);
-        conectar("Presidente Costa e Silva", DESTINO_UFERSA);
         conectar("Boa Vista", "Bom Jesus");
         conectar("Boa Vista", "Abolicao");
-        conectar("Doze Anos", DESTINO_UFERSA);
-        conectar("Alto de Sao Manoel", DESTINO_UFERSA);
+
+        // ===== Arestas para UFERSA =====
+        conectar("Aeroporto", "UFERSA");
+        conectar("Costa e Silva", "UFERSA");
+        conectar("Presidente Costa e Silva", "UFERSA");
+        conectar("Doze Anos", "UFERSA");
+        conectar("Alto de Sao Manoel", "UFERSA");
+
+        // ===== Arestas para UERN =====
+        conectar("Centro", "UERN");
+        conectar("Costa e Silva", "UERN");
+        conectar("Nova Betania", "UERN");
+        conectar("Alto de Sao Manoel", "UERN");
+
+        // ===== Arestas para IFRN =====
+        conectar("Nova Betania", "IFRN");
+        conectar("Bom Jardim", "IFRN");
+        conectar("Centro", "IFRN");
+        conectar("Belo Horizonte", "IFRN");
     }
 
     private void coord(String bairro, double lat, double lng) {
@@ -105,10 +125,14 @@ public class BairroService {
     }
 
     public Set<String> todosBairros() {
-        // exclui UFERSA da lista que o usuario escolhe como bairro residencial
+        // exclui universidades da lista que o usuario escolhe como bairro residencial
         Set<String> apenasBairros = new java.util.LinkedHashSet<>(coordenadas.keySet());
-        apenasBairros.remove(DESTINO_UFERSA);
+        apenasBairros.removeAll(UNIVERSIDADES);
         return apenasBairros;
+    }
+
+    public Set<String> universidades() {
+        return new java.util.LinkedHashSet<>(UNIVERSIDADES);
     }
 
     public Coordenada coordenadaDe(String bairro) {
