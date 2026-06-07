@@ -11,6 +11,8 @@ public class Usuario {
     private String curso;
     private String bairro;
     private String cep;            // CEP do endereco (opcional)
+    private String logradouro;     // rua (preenchida pelo CEP via ViaCEP)
+    private String numero;         // numero do endereco (opcional)
     private Double latitude;       // coordenada precisa do endereco (geocodificada via CEP)
     private Double longitude;
     private String universidade;
@@ -54,6 +56,20 @@ public class Usuario {
 
     public String getCep() { return cep; }
     public void setCep(String cep) { this.cep = cep; }
+
+    public String getLogradouro() { return logradouro; }
+    public void setLogradouro(String logradouro) { this.logradouro = logradouro; }
+
+    public String getNumero() { return numero; }
+    public void setNumero(String numero) { this.numero = numero; }
+
+    /** Endereco textual curto (rua, numero) — vazio se nao informado. */
+    public String enderecoCurto() {
+        if (logradouro == null || logradouro.isBlank()) return null;
+        return (numero == null || numero.isBlank())
+                ? logradouro
+                : logradouro + ", " + numero;
+    }
 
     public Double getLatitude() { return latitude; }
     public void setLatitude(Double latitude) { this.latitude = latitude; }

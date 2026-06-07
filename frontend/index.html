@@ -87,10 +87,12 @@
   <section class="block" id="cadastro">
     <div class="block__side">
       <span class="numeral">01</span>
-      <h2 class="block__h2">Cadastro</h2>
+      <h2 class="block__h2" id="cadastroTitulo">Cadastro</h2>
       <p class="block__intro">
         Crie sua conta universitária. Se você dirige, marque
         <em>“Sou motorista”</em> para receber pedidos de carona.
+        Já cadastrado? Seus dados aparecem aqui para você
+        <strong>atualizar o endereço (CEP)</strong> quando quiser.
       </p>
       <div class="block__hint">
         <span class="tag tag--hash">HASH</span>
@@ -134,9 +136,23 @@
         </label>
       </div>
 
+      <div class="form__row">
+        <label class="field">
+          <span>Rua / Logradouro</span>
+          <input name="logradouro" id="inputLogradouro" autocomplete="street-address"
+                 placeholder="Preenchido pelo CEP" />
+        </label>
+        <label class="field">
+          <span>Número <small>(opcional, mais preciso)</small></span>
+          <input name="numero" id="inputNumero" inputmode="numeric"
+                 placeholder="Ex.: 1561" />
+        </label>
+      </div>
+
       <p class="form__hint" id="cepFeedback">
-        Informe o CEP para preencher o bairro automaticamente e localizar seu
-        endereço com precisão — melhora o cálculo da rota da carona.
+        Informe o CEP: o sistema busca a rua e o bairro automaticamente e localiza
+        seu endereço com precisão — assim a melhor rota da carona é calculada a
+        partir do seu ponto exato.
       </p>
 
       <div class="form__row">
