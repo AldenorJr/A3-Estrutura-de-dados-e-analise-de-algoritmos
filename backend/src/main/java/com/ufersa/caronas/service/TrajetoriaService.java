@@ -95,12 +95,12 @@ public class TrajetoriaService {
         List<TrajetoriaResult.Parada> paradas = new ArrayList<>();
         paradas.add(new TrajetoriaResult.Parada(
                 origemMotorista, "PARTIDA",
-                motorista.getNome() + " sai de " + origemMotorista,
+                motorista.getNome() + " sai de " + local(motorista, origemMotorista),
                 coordExata(motorista)));
         if (!origemMotorista.equalsIgnoreCase(origemPassageiro)) {
             paradas.add(new TrajetoriaResult.Parada(
                     origemPassageiro, "PICKUP",
-                    "Pega " + passageiro.getNome() + " em " + origemPassageiro,
+                    "Pega " + passageiro.getNome() + " em " + local(passageiro, origemPassageiro),
                     coordExata(passageiro)));
         }
         paradas.add(new TrajetoriaResult.Parada(
@@ -136,6 +136,12 @@ public class TrajetoriaService {
             return new Coordenada(u.getLatitude(), u.getLongitude());
         }
         return bairroService.coordenadaDe(u.getBairro());
+    }
+
+    /** "Rua, numero - Bairro" quando ha endereco do CEP; senao so o bairro. */
+    private String local(Usuario u, String bairro) {
+        String end = u.enderecoCurto();
+        return end == null ? bairro : end + " - " + bairro;
     }
 
     private double somaSegmentos(List<String> caminho) {

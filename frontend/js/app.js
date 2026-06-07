@@ -37,11 +37,16 @@
       console.error("Falha ao carregar dados iniciais:", err);
       showToast("Backend offline. Inicie o Spring Boot em http://localhost:8080.", "error");
     }
+    // A lista de caronas e as stats nao dependem do login — carrega ja,
+    // sem ficar preso atras da validacao do usuario.
+    atualizarStats();
+    carregarCaronas();
     // Valida que o usuario do localStorage ainda existe no backend.
     // Se o backend reiniciou (docker compose down/up), os IDs custom somem.
     await validarUsuarioLogado();
-    atualizarStats();
-    carregarCaronas();
+    // Com os selects ja preenchidos e o login validado, aplica o modo do
+    // formulario (criar conta x atualizar meus dados).
+    aplicarModoCadastro();
   });
 
   async function validarUsuarioLogado() {
@@ -141,11 +146,19 @@
       cepEl.addEventListener("input", onCepInput);
       cepEl.addEventListener("blur", onCepLookup);
     }
+    // ao informar/alterar o numero, refina a coordenada do endereco
+    $("#inputNumero")?.addEventListener("blur", () => {
+      if (($("#inputCep")?.value || "").replace(/\D/g, "").length === 8) onCepLookup();
+    });
 
     $("#logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("usuario");
       state.usuario = null;
+      state.cadastroLocal = null;
       refreshUserChip();
+      $("#formUsuario").reset();
+      $("#formVeiculo").hidden = true;
+      aplicarModoCadastro(); // volta para "Criar conta"
     });
 
     $("#formUsuario").addEventListener("submit", onSubmitUsuario);
@@ -227,13 +240,22 @@
     }
 
     const bairroMatch = selecionarBairro(endereco.bairro);
-    const partes = [endereco.logradouro, endereco.bairro, endereco.localidade, endereco.uf]
-      .filter(Boolean).join(", ");
+
+    // Preenche a rua automaticamente (sem sobrescrever o que o usuario digitou)
+    const ruaEl = $("#inputLogradouro");
+    if (ruaEl && !ruaEl.value.trim()) ruaEl.value = endereco.logradouro || "";
+    const rua = ruaEl ? ruaEl.value.trim() : (endereco.logradouro || "");
+    const numero = ($("#inputNumero")?.value || "").trim();
+
+    const partes = [
+      numero ? `${rua}, ${numero}` : rua,
+      endereco.bairro, endereco.localidade, endereco.uf,
+    ].filter(Boolean).join(", ");
 
     // Geocodifica o endereco para coordenada precisa (opcional, melhora a rota)
     let coord = null;
     try {
-      coord = await geocodificar(endereco, cep);
+      coord = await geocodificar({ rua, numero, cidade: endereco.localidade, uf: endereco.uf, cep });
     } catch (err) {
       console.warn("Geocodificação falhou:", err);
     }
@@ -258,16 +280,16 @@
     }
   }
 
-  // Nominatim (OpenStreetMap): tenta pelo endereco; cai pro CEP se preciso.
-  async function geocodificar(endereco, cep) {
+  // Nominatim (OpenStreetMap): tenta pela rua (+numero); cai pro CEP se preciso.
+  async function geocodificar({ rua, numero, cidade, uf, cep }) {
     const tentativas = [];
-    if (endereco.logradouro) {
+    if (rua) {
       tentativas.push(
         `https://nominatim.openstreetmap.org/search?format=json&limit=1&` +
         new URLSearchParams({
-          street: endereco.logradouro,
-          city: endereco.localidade || "",
-          state: endereco.uf || "",
+          street: numero ? `${numero} ${rua}` : rua,
+          city: cidade || "",
+          state: uf || "",
           country: "Brasil",
         })
       );
@@ -304,6 +326,8 @@
       universidade: fd.get("universidade"),
       bairro: fd.get("bairro"),
       cep: (fd.get("cep") || "").replace(/\D/g, "") || null,
+      logradouro: (fd.get("logradouro") || "").trim() || null,
+      numero: (fd.get("numero") || "").trim() || null,
       motorista,
     };
     // coordenada precisa resolvida pelo CEP (se o CEP no estado bate com o digitado)
@@ -318,22 +342,79 @@
       payload.veiculoVagas  = Number(fd.get("veiculoVagas")) || 1;
     }
 
+    const editando = !!state.usuario;
     try {
-      const u = await api.criarUsuario(payload);
+      const u = editando
+        ? await api.atualizarUsuario(state.usuario.id, payload)
+        : await api.criarUsuario(payload);
       state.usuario = u;
       localStorage.setItem("usuario", JSON.stringify(u));
       refreshUserChip();
       atualizarStats();
-      fb.textContent = `Conta criada! Você é ${u.motorista ? "motorista" : "passageiro"} no bairro ${u.bairro}. Agora cadastre sua rota.`;
-      e.target.reset();
-      state.cadastroLocal = null;
-      setCepFeedback("Informe o CEP para preencher o bairro automaticamente e localizar seu endereço com precisão — melhora o cálculo da rota da carona.");
-      $("#formVeiculo").hidden = true;
-      setTimeout(() => document.querySelector("#rota").scrollIntoView({ behavior: "smooth" }), 600);
+      carregarCaronas();
+
+      if (editando) {
+        const end = u.logradouro
+          ? `${u.logradouro}${u.numero ? ", " + u.numero : ""} - ${u.bairro}`
+          : u.bairro;
+        fb.textContent = u.latitude != null
+          ? `Dados atualizados! Seu endereço (${end}) foi localizado com precisão — a rota da carona agora parte do seu ponto exato.`
+          : `Dados atualizados! Informe o CEP para localizar seu endereço com precisão e melhorar a rota.`;
+        aplicarModoCadastro(); // re-sincroniza o form com os dados salvos
+      } else {
+        fb.textContent = `Conta criada! Você é ${u.motorista ? "motorista" : "passageiro"} no bairro ${u.bairro}. Agora cadastre sua rota.`;
+        aplicarModoCadastro(); // passa para modo "atualizar meus dados"
+        setTimeout(() => document.querySelector("#rota").scrollIntoView({ behavior: "smooth" }), 600);
+      }
     } catch (err) {
       fb.className = "form__feedback error";
-      fb.textContent = "Erro ao criar conta: " + err.message;
+      fb.textContent = `Erro ao ${editando ? "atualizar" : "criar conta"}: ` + err.message;
     }
+  }
+
+  // Pre-preenche o formulario de cadastro com os dados do usuario logado e
+  // muda o botao para "Atualizar meus dados". Sem login, volta ao modo criar.
+  function aplicarModoCadastro() {
+    const f = $("#formUsuario");
+    if (!f) return;
+    const btn = f.querySelector("button[type=submit]");
+    const titulo = $("#cadastroTitulo");
+    const u = state.usuario;
+    if (u) {
+      f.nome.value = u.nome || "";
+      f.email.value = u.email || "";
+      f.curso.value = u.curso || "";
+      if (u.universidade) f.universidade.value = u.universidade;
+      if (u.bairro) f.bairro.value = u.bairro;
+      f.cep.value = u.cep ? formatarCep(u.cep) : "";
+      f.logradouro.value = u.logradouro || "";
+      f.numero.value = u.numero || "";
+      $("#checkMotorista").checked = !!u.motorista;
+      $("#formVeiculo").hidden = !u.motorista;
+      if (u.veiculo) {
+        f.veiculoModelo.value = u.veiculo.modelo || "";
+        f.veiculoPlaca.value  = u.veiculo.placa || "";
+        f.veiculoCor.value    = u.veiculo.cor || "";
+        f.veiculoVagas.value  = u.veiculo.vagas || 3;
+      }
+      // mantem a coordenada salva para reenvio se o CEP nao for re-digitado
+      if (u.latitude != null && u.longitude != null && u.cep) {
+        state.cadastroLocal = {
+          cep: String(u.cep).replace(/\D/g, ""),
+          latitude: u.latitude, longitude: u.longitude,
+        };
+      }
+      if (btn) btn.textContent = "Atualizar meus dados";
+      if (titulo) titulo.textContent = "Meus dados";
+    } else {
+      if (btn) btn.textContent = "Criar conta";
+      if (titulo) titulo.textContent = "Cadastro";
+    }
+  }
+
+  function formatarCep(v) {
+    const d = String(v).replace(/\D/g, "").slice(0, 8);
+    return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
   }
 
   // ============================================================ submit rota

@@ -31,6 +31,8 @@ public class UsuarioController {
         Usuario u = new Usuario(dto.nome, dto.email, dto.curso, dto.bairro,
                 dto.universidade, dto.motorista, v);
         u.setCep(dto.cep);
+        u.setLogradouro(dto.logradouro);
+        u.setNumero(dto.numero);
         u.setLatitude(dto.latitude);
         u.setLongitude(dto.longitude);
         return ResponseEntity.ok(usuarioService.salvar(u));
@@ -39,6 +41,36 @@ public class UsuarioController {
     @GetMapping
     public List<Usuario> listar() {
         return usuarioService.listarTodos();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Usuario> atualizar(@PathVariable Long id, @RequestBody UsuarioDTO dto) {
+        Usuario u = usuarioService.buscarPorId(id);
+        if (u == null) return ResponseEntity.notFound().build();
+
+        String bairroAntigo = u.getBairro();
+        if (dto.nome != null)         u.setNome(dto.nome);
+        if (dto.email != null)        u.setEmail(dto.email);
+        if (dto.curso != null)        u.setCurso(dto.curso);
+        if (dto.bairro != null)       u.setBairro(dto.bairro);
+        if (dto.universidade != null) u.setUniversidade(dto.universidade);
+        // endereco (CEP) — sempre aplica o que veio (inclusive limpar)
+        u.setCep(dto.cep);
+        u.setLogradouro(dto.logradouro);
+        u.setNumero(dto.numero);
+        u.setLatitude(dto.latitude);
+        u.setLongitude(dto.longitude);
+        // papel/veiculo
+        u.setMotorista(dto.motorista);
+        if (dto.motorista && dto.veiculoModelo != null) {
+            u.setVeiculo(new Veiculo(dto.veiculoModelo, dto.veiculoPlaca, dto.veiculoCor,
+                    dto.veiculoVagas == null ? 1 : dto.veiculoVagas));
+        } else if (!dto.motorista) {
+            u.setVeiculo(null);
+        }
+
+        usuarioService.atualizar(u, bairroAntigo);
+        return ResponseEntity.ok(u);
     }
 
     @GetMapping("/{id}")
