@@ -95,7 +95,7 @@ função get(chave):
 O pior caso ocorre quando **todas as chaves colidem no mesmo balde**
 — extremamente raro com `hashCode()` bem distribuído. Na prática,
 nossas estatísticas (endpoint `/api/usuarios/stats`) mostram que
-com **9 usuários em 7 bairros** ocupamos **6 baldes diferentes**
+com **27 usuários em 9 bairros** ocupamos **7 baldes diferentes**
 (boa distribuição).
 
 ### Por que escolhemos
@@ -305,7 +305,14 @@ em `structures/GrafoPonderado.java`). Diferente do `Grafo<T>` usado
 para compatibilidade entre usuários (sem peso), aqui as arestas têm
 um peso — no nosso caso, a **distância em km entre dois bairros**,
 calculada via fórmula de Haversine sobre as coordenadas geográficas
-reais de Mossoró/RN.
+reais de Mossoró/RN (bairros e universidades — UFERSA, UERN, IFRN e UNP
+— validadas no OpenStreetMap).
+
+> **Precisão por CEP:** quando o usuário informa o CEP no cadastro, o
+> endereço é geocodificado (latitude/longitude) e os pontos de partida
+> (motorista) e de embarque (passageiro) passam a usar a coordenada
+> exata do endereço em vez do centroide do bairro — refinando a
+> distância e o traçado calculados pelo Dijkstra.
 
 ### Pseudocódigo
 

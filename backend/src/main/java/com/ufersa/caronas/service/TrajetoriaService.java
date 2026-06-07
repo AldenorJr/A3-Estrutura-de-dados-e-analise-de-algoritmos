@@ -79,6 +79,16 @@ public class TrajetoriaService {
             Coordenada c = bairroService.coordenadaDe(b);
             if (c != null) poligono.add(c);
         }
+        // Precisao via CEP: substitui o ponto de partida (motorista) e o ponto
+        // de pickup (passageiro) pela coordenada exata do endereco, quando houver.
+        // O indice do pickup e o ultimo no da perna 1 dentro da lista mesclada.
+        int idxPickup = perna1.caminho.isEmpty() ? -1 : perna1.caminho.size() - 1;
+        if (!poligono.isEmpty() && motorista.temCoordenadaPrecisa()) {
+            poligono.set(0, coordExata(motorista));
+        }
+        if (idxPickup >= 0 && idxPickup < poligono.size() && passageiro.temCoordenadaPrecisa()) {
+            poligono.set(idxPickup, coordExata(passageiro));
+        }
         result.caminhoPoligono = poligono;
 
         // Paradas principais (PARTIDA, PICKUP, DESTINO)
@@ -86,12 +96,12 @@ public class TrajetoriaService {
         paradas.add(new TrajetoriaResult.Parada(
                 origemMotorista, "PARTIDA",
                 motorista.getNome() + " sai de " + origemMotorista,
-                bairroService.coordenadaDe(origemMotorista)));
+                coordExata(motorista)));
         if (!origemMotorista.equalsIgnoreCase(origemPassageiro)) {
             paradas.add(new TrajetoriaResult.Parada(
                     origemPassageiro, "PICKUP",
                     "Pega " + passageiro.getNome() + " em " + origemPassageiro,
-                    bairroService.coordenadaDe(origemPassageiro)));
+                    coordExata(passageiro)));
         }
         paradas.add(new TrajetoriaResult.Parada(
                 destino, "DESTINO",
@@ -115,6 +125,17 @@ public class TrajetoriaService {
         result.economiaEstimadaReais = round2(kmPassageiroSozinho * PRECO_KM_UBER);
 
         return result;
+    }
+
+    /**
+     * Coordenada exata do usuario (geocodificada pelo CEP no cadastro) quando
+     * disponivel; senao, cai para o centroide do bairro.
+     */
+    private Coordenada coordExata(Usuario u) {
+        if (u.temCoordenadaPrecisa()) {
+            return new Coordenada(u.getLatitude(), u.getLongitude());
+        }
+        return bairroService.coordenadaDe(u.getBairro());
     }
 
     private double somaSegmentos(List<String> caminho) {

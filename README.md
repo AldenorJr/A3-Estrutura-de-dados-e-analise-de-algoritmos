@@ -5,8 +5,8 @@
 > Sistema que combina **Tabela Hash**, **Grafo**, **QuickSort** e
 > **Dijkstra** (todos implementados do zero, sem usar `HashMap`,
 > `Collections.sort` ou bibliotecas de grafo prontas) para conectar
-> estudantes da **UFERSA**, **UERN** e **IFRN** que vão para a mesma
-> universidade em horários compatíveis, e calcular o melhor trajeto
+> estudantes da **UFERSA**, **UERN**, **IFRN** e **UNP** que vão para a
+> mesma universidade em horários compatíveis, e calcular o melhor trajeto
 > da corrida com mapa interativo.
 
 ---
@@ -78,8 +78,8 @@ mvn spring-boot:run
 Aguarde aparecer no log:
 
 ```
-Seed concluido: 19 usuarios e 28 rotas cadastradas.
-Universidades: UFERSA, UERN, IFRN
+Seed concluido: 27 usuarios e 35 rotas cadastradas.
+Universidades: UFERSA, UERN, IFRN, UNP
 Acesse http://localhost:8080/api/usuarios
 ```
 
@@ -107,16 +107,21 @@ python3 -m http.server 5500
 ### Usar a aplicação
 
 1. Preencha o **Cadastro** (marque “Sou motorista” para oferecer caronas).
+   Informe o **CEP**: o sistema busca o endereço no ViaCEP, preenche o
+   bairro automaticamente e geocodifica a localização (lat/lng) para
+   tornar o cálculo da rota mais preciso.
 2. Cadastre uma **Rota** com bairro de origem, **universidade** e horário.
 3. Vá para **Buscar carona**, escolha **universidade** e horário desejado.
 4. Veja os matches ordenados por score.
 5. Clique em **"Ver trajeto no mapa →"** num match: abre modal com
    mapa Leaflet, sequência de paradas (motorista → você → universidade),
    distância em km, tempo estimado e economia em R$.
+6. Em **Todas as caronas**, veja a lista completa de caronas disponíveis
+   no sistema, com filtros por universidade e por tipo (ida/volta).
 
-Já existem **19 usuários e 28 rotas de exemplo** pré-carregados
+Já existem **27 usuários e 35 rotas de exemplo** pré-carregados
 (motoristas e passageiros em diferentes bairros de Mossoró,
-distribuídos entre UFERSA, UERN e IFRN), então você pode buscar
+distribuídos entre UFERSA, UERN, IFRN e UNP), então você pode buscar
 caronas imediatamente após subir o sistema.
 
 ---
@@ -143,7 +148,7 @@ PROJETO A3 ALGORITMO/
 │       │                   BairroService, TrajetoriaService)
 │       ├── controller/    (REST endpoints)
 │       ├── dto/           (objetos de transferência)
-│       └── seed/SeedDataRunner.java   # 19 usuários + 28 rotas
+│       └── seed/SeedDataRunner.java   # 27 usuários + 35 rotas
 │
 ├── frontend/                                # HTML/CSS/JS puro
 │   ├── Dockerfile                           # imagem nginx alpine
@@ -170,7 +175,7 @@ PROJETO A3 ALGORITMO/
 | GET    | `/api/bairros`                        | Lista bairros suportados               |
 | GET    | `/api/universidades`                  | Lista universidades suportadas         |
 | GET    | `/api/usuarios`                       | Lista todos os usuários                |
-| POST   | `/api/usuarios`                       | Cria usuário                           |
+| POST   | `/api/usuarios`                       | Cria usuário (aceita `cep`, `latitude`, `longitude`) |
 | GET    | `/api/usuarios/{id}`                  | Busca por id                           |
 | GET    | `/api/usuarios/bairro/{bairro}`       | Busca por bairro (usa Hash O(1))       |
 | POST   | `/api/usuarios/avaliar`               | Avalia um motorista (0–5)              |
@@ -203,4 +208,4 @@ curl "http://localhost:8080/api/match?usuarioId=6&horario=07:15"
 
 Disciplina: **Estruturas de Dados e Análise de Algoritmos**
 Avaliação: **A3**
-Universidades suportadas no demo: **UFERSA, UERN, IFRN** (Mossoró/RN)
+Universidades suportadas no demo: **UFERSA, UERN, IFRN, UNP** (Mossoró/RN)

@@ -29,7 +29,7 @@ public class BairroService {
 
     /** Universidades suportadas (sao tratadas como "nos" do grafo de bairros). */
     public static final Set<String> UNIVERSIDADES = new java.util.LinkedHashSet<>(
-            java.util.Arrays.asList("UFERSA", "UERN", "IFRN"));
+            java.util.Arrays.asList("UFERSA", "UERN", "IFRN", "UNP"));
 
     private final Map<String, Coordenada> coordenadas = new LinkedHashMap<>();
     private final Map<String, Set<String>> bairrosProximos = new HashMap<>();
@@ -52,10 +52,11 @@ public class BairroService {
         coord("Boa Vista",               -5.1933, -37.3056);
         coord("Bom Jesus",               -5.1825, -37.3056);
 
-        // ===== Universidades (destinos) =====
-        coord("UFERSA",                  -5.2030, -37.3261);  // Costa e Silva
-        coord("UERN",                    -5.1953, -37.3473);  // Costa e Silva / Centro
-        coord("IFRN",                    -5.1909, -37.3522);  // Nova Betania (Campus Mossoro)
+        // ===== Universidades (destinos) — coordenadas reais (OpenStreetMap) =====
+        coord("UFERSA",                  -5.2106, -37.3150);  // Av. Francisco Mota, 572 - Costa e Silva
+        coord("UERN",                    -5.2040, -37.3180);  // Av. Prof. Antonio Campos - Costa e Silva
+        coord("IFRN",                    -5.2140, -37.3190);  // Rua Raimundo Firmino de Oliveira, 400 - Costa e Silva
+        coord("UNP",                     -5.1762, -37.3711);  // Av. Joao da Escossia, 1561 - Nova Betania
 
         // ===== Vizinhanca bairro-a-bairro =====
         conectar("Centro", "Nova Betania");
@@ -94,6 +95,12 @@ public class BairroService {
         conectar("Bom Jardim", "IFRN");
         conectar("Centro", "IFRN");
         conectar("Belo Horizonte", "IFRN");
+
+        // ===== Arestas para UNP (Nova Betania / Bom Jardim) =====
+        conectar("Nova Betania", "UNP");
+        conectar("Bom Jardim", "UNP");
+        conectar("Centro", "UNP");
+        conectar("Aeroporto", "UNP");
     }
 
     private void coord(String bairro, double lat, double lng) {
