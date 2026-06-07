@@ -8,9 +8,11 @@
 │                                                                 │
 │   ┌─────────────────────────────────────────────────────────┐  │
 │   │   frontend/index.html (HTML + CSS + JS puro)            │  │
-│   │   - Formulários de cadastro                             │  │
+│   │   - Formulários de cadastro (com CEP -> ViaCEP/geo)     │  │
 │   │   - Tela de busca de carona                             │  │
 │   │   - Cards de resultado com score                        │  │
+│   │   - Lista de todas as caronas (filtros)                 │  │
+│   │   - Mapa do trajeto (Leaflet + OSRM)                    │  │
 │   └────────────────────────┬────────────────────────────────┘  │
 └────────────────────────────│────────────────────────────────────┘
                              │   HTTP/JSON (CORS habilitado)
@@ -20,29 +22,33 @@
 │                  http://localhost:8080                          │
 │                                                                 │
 │   ┌─────────── controller (REST) ──────────────────────────┐   │
-│   │  UsuarioController · RotaController                    │   │
-│   │  MatchController · BairroController                    │   │
+│   │  UsuarioController · RotaController · MatchController  │   │
+│   │  BairroController · TrajetoriaController               │   │
 │   └──────────────────────┬─────────────────────────────────┘   │
 │                          ▼                                      │
 │   ┌─────────── service (regras de negócio) ────────────────┐   │
 │   │  UsuarioService  ──┐                                   │   │
 │   │  RotaService     ──┼─→ usa TabelaHash                  │   │
 │   │  BairroService   ──┘                                   │   │
-│   │  MatchService    ─→ usa Hash + Grafo + QuickSort       │   │
+│   │  MatchService      ─→ usa Hash + Grafo + QuickSort     │   │
+│   │  TrajetoriaService ─→ usa GrafoPonderado + Dijkstra    │   │
 │   └──────────────────────┬─────────────────────────────────┘   │
 │                          ▼                                      │
 │   ┌─────────── structures (★ algoritmos do projeto) ──────┐    │
 │   │  TabelaHash<K,V>   — encadeamento separado            │    │
 │   │  Grafo<T>          — lista de adjacência + BFS        │    │
 │   │  QuickSort         — ordenação genérica               │    │
+│   │  GrafoPonderado<T> — lista de adjacência com pesos    │    │
+│   │  Dijkstra          — caminho mínimo (min-heap)        │    │
 │   └────────────────────────────────────────────────────────┘   │
 │                                                                 │
 │   ┌─────────── model (POJOs) ──────────────────────────────┐   │
-│   │  Usuario · Rota · Veiculo · MatchResult · TipoRota     │   │
+│   │  Usuario · Rota · Veiculo · Coordenada · TipoRota      │   │
+│   │  MatchResult · TrajetoriaResult                        │   │
 │   └─────────────────────────────────────────────────────────┘   │
 │                                                                 │
 │   ┌─────────── seed ───────────────────────────────────────┐   │
-│   │  SeedDataRunner — carrega 9 usuários + 8 rotas         │   │
+│   │  SeedDataRunner — carrega 27 usuários + 35 rotas       │   │
 │   │  na inicialização                                      │   │
 │   └─────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────┘
@@ -152,11 +158,14 @@ seria restrito a domínios específicos.
 │ - email          │         │ - bairroOrigem   │
 │ - curso          │         │ - destino        │
 │ - bairro         │         │ - horarioSaida   │
-│ - universidade   │         │ - vagasDisponiveis│
-│ - motorista      │         │ - tipo (IDA/VOLTA)│
-│ - avaliacao      │         └──────────────────┘
-│ - veiculo*       │                  ▲
-└────────┬─────────┘                  │ N
+│ - cep            │         │ - vagasDisponiveis│
+│ - latitude       │         │ - tipo (IDA/VOLTA)│
+│ - longitude      │         └──────────────────┘
+│ - universidade   │                  ▲
+│ - motorista      │                  │ N
+│ - avaliacao      │                  │
+│ - veiculo*       │                  │
+└────────┬─────────┘                  │
          │ 1                          │
          └──── owns ────► Veiculo     │
                                       │
@@ -171,4 +180,7 @@ seria restrito a domínios específicos.
      │ - diferencaMinutos │
      │ - compatibilidade  │
      └────────────────────┘
+
+(latitude/longitude são opcionais: preenchidos quando o usuário informa
+o CEP — geocodificado para localizar o endereço com precisão na rota.)
 ```

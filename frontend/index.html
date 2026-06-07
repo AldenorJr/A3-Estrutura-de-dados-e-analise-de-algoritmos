@@ -31,6 +31,7 @@
         <a href="#cadastro" data-nav>Cadastro</a>
         <a href="#rota" data-nav>Cadastrar rota</a>
         <a href="#buscar" data-nav>Buscar carona</a>
+        <a href="#caronas" data-nav>Todas as caronas</a>
         <a href="#algoritmos" data-nav>Algoritmos</a>
       </nav>
       <div class="userchip" id="userchip" hidden>
@@ -86,10 +87,12 @@
   <section class="block" id="cadastro">
     <div class="block__side">
       <span class="numeral">01</span>
-      <h2 class="block__h2">Cadastro</h2>
+      <h2 class="block__h2" id="cadastroTitulo">Cadastro</h2>
       <p class="block__intro">
         Crie sua conta universitária. Se você dirige, marque
         <em>“Sou motorista”</em> para receber pedidos de carona.
+        Já cadastrado? Seus dados aparecem aqui para você
+        <strong>atualizar o endereço (CEP)</strong> quando quiser.
       </p>
       <div class="block__hint">
         <span class="tag tag--hash">HASH</span>
@@ -123,9 +126,36 @@
 
       <div class="form__row">
         <label class="field">
+          <span>CEP</span>
+          <input name="cep" id="inputCep" inputmode="numeric" maxlength="9"
+                 autocomplete="postal-code" placeholder="59600-000" />
+        </label>
+        <label class="field">
           <span>Bairro</span>
           <select name="bairro" id="selectBairroUsuario" required></select>
         </label>
+      </div>
+
+      <div class="form__row">
+        <label class="field">
+          <span>Rua / Logradouro</span>
+          <input name="logradouro" id="inputLogradouro" autocomplete="street-address"
+                 placeholder="Preenchido pelo CEP" />
+        </label>
+        <label class="field">
+          <span>Número <small>(opcional, mais preciso)</small></span>
+          <input name="numero" id="inputNumero" inputmode="numeric"
+                 placeholder="Ex.: 1561" />
+        </label>
+      </div>
+
+      <p class="form__hint" id="cepFeedback">
+        Informe o CEP: o sistema busca a rua e o bairro automaticamente e localiza
+        seu endereço com precisão — assim a melhor rota da carona é calculada a
+        partir do seu ponto exato.
+      </p>
+
+      <div class="form__row">
         <label class="field field--switch">
           <span>Sou motorista</span>
           <div class="switch">
@@ -262,11 +292,56 @@
     </div>
   </section>
 
+  <!-- ========================================== TODAS AS CARONAS -->
+  <section class="block block--alt" id="caronas">
+    <div class="block__side">
+      <span class="numeral">04</span>
+      <h2 class="block__h2">Todas as caronas</h2>
+      <p class="block__intro">
+        Veja <strong>todas as caronas disponíveis</strong> no sistema, de todas as
+        universidades. Filtre por universidade e tipo (ida ou volta) para encontrar
+        a sua.
+      </p>
+      <div class="block__hint">
+        <span class="tag tag--hash">HASH</span>
+        A lista vem da <strong>Tabela Hash</strong> de rotas (<code>/api/rotas</code>),
+        cruzada com os motoristas indexados por id — tudo em <strong>O(1)</strong> por busca.
+      </div>
+    </div>
+
+    <div class="card form">
+      <form id="formCaronas" class="form__row form__row--inline">
+        <label class="field field--grow">
+          <span>Universidade</span>
+          <select name="universidade" id="selectUniversidadeCaronas">
+            <option value="">Todas</option>
+          </select>
+        </label>
+        <label class="field field--grow">
+          <span>Tipo</span>
+          <select name="tipo" id="selectTipoCaronas">
+            <option value="">Todos</option>
+            <option value="IDA">Ida</option>
+            <option value="VOLTA">Volta</option>
+          </select>
+        </label>
+        <button type="submit" class="btn btn--primary btn--inline">Atualizar</button>
+      </form>
+
+      <div class="results" id="ridesList">
+        <div class="results__empty">
+          <span class="numeral numeral--ghost">◐</span>
+          <p>Carregando caronas disponíveis…</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ========================================== ALGORITMOS / STATS -->
   <section class="block block--dark" id="algoritmos">
     <div class="algo">
       <div class="algo__header">
-        <span class="numeral numeral--light">04</span>
+        <span class="numeral numeral--light">05</span>
         <h2 class="block__h2 block__h2--light">Os algoritmos por trás</h2>
         <p class="block__intro block__intro--light">
           Três estruturas de dados clássicas trabalhando juntas. Cada uma

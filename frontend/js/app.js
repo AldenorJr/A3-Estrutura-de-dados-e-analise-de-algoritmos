@@ -14,6 +14,7 @@
     mapa: null,               // instancia Leaflet
     camadaTrajeto: null,      // LayerGroup do trajeto atual
     trajetoAtivo: null,       // {passageiroId, rotaId}
+    cadastroLocal: null,      // {cep, latitude, longitude} resolvido pelo CEP
   };
 
   // ============================================================ bootstrap
@@ -31,14 +32,21 @@
       state.universidades = universidades;
       preencherSelectsBairro();
       preencherSelectsUniversidade();
+      preencherFiltroCaronasUniversidade();
     } catch (err) {
       console.error("Falha ao carregar dados iniciais:", err);
       showToast("Backend offline. Inicie o Spring Boot em http://localhost:8080.", "error");
     }
+    // A lista de caronas e as stats nao dependem do login — carrega ja,
+    // sem ficar preso atras da validacao do usuario.
+    atualizarStats();
+    carregarCaronas();
     // Valida que o usuario do localStorage ainda existe no backend.
     // Se o backend reiniciou (docker compose down/up), os IDs custom somem.
     await validarUsuarioLogado();
-    atualizarStats();
+    // Com os selects ja preenchidos e o login validado, aplica o modo do
+    // formulario (criar conta x atualizar meus dados).
+    aplicarModoCadastro();
   });
 
   async function validarUsuarioLogado() {
@@ -86,6 +94,15 @@
     });
   }
 
+  function preencherFiltroCaronasUniversidade() {
+    const el = document.getElementById("selectUniversidadeCaronas");
+    if (!el) return;
+    const opts = state.universidades
+      .map((u) => `<option value="${u}">${u}</option>`)
+      .join("");
+    el.innerHTML = `<option value="">Todas</option>` + opts;
+  }
+
   function refreshUserChip() {
     const chip = $("#userchip");
     const semLogin = $("#rotaSemLogin");
@@ -124,15 +141,33 @@
       $("#formVeiculo").hidden = !e.target.checked;
     });
 
+    const cepEl = $("#inputCep");
+    if (cepEl) {
+      cepEl.addEventListener("input", onCepInput);
+      cepEl.addEventListener("blur", onCepLookup);
+    }
+    // ao informar/alterar o numero, refina a coordenada do endereco
+    $("#inputNumero")?.addEventListener("blur", () => {
+      if (($("#inputCep")?.value || "").replace(/\D/g, "").length === 8) onCepLookup();
+    });
+
     $("#logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("usuario");
       state.usuario = null;
+      state.cadastroLocal = null;
       refreshUserChip();
+      $("#formUsuario").reset();
+      $("#formVeiculo").hidden = true;
+      aplicarModoCadastro(); // volta para "Criar conta"
     });
 
     $("#formUsuario").addEventListener("submit", onSubmitUsuario);
     $("#formRota").addEventListener("submit", onSubmitRota);
     $("#formBusca").addEventListener("submit", onSubmitBusca);
+    $("#formCaronas").addEventListener("submit", (e) => {
+      e.preventDefault();
+      carregarCaronas();
+    });
 
     // Modal
     $$("[data-close]").forEach((el) =>
@@ -142,6 +177,138 @@
       if (e.key === "Escape") fecharModal();
     });
     $("#btnConfirmar").addEventListener("click", confirmarCarona);
+  }
+
+  // ============================================================ CEP
+  // Mascara simples: 00000-000
+  function onCepInput(e) {
+    const dig = e.target.value.replace(/\D/g, "").slice(0, 8);
+    e.target.value = dig.length > 5 ? `${dig.slice(0, 5)}-${dig.slice(5)}` : dig;
+    // qualquer edicao invalida a coordenada resolvida anteriormente
+    state.cadastroLocal = null;
+  }
+
+  function setCepFeedback(msg, cls = "") {
+    const fb = $("#cepFeedback");
+    if (!fb) return;
+    fb.className = "form__hint" + (cls ? " " + cls : "");
+    fb.textContent = msg;
+  }
+
+  // Normaliza para comparar bairros (sem acento, minusculo)
+  function normalizar(str) {
+    return String(str ?? "")
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .trim().toLowerCase();
+  }
+
+  function selecionarBairro(nomeViaCep) {
+    const alvo = normalizar(nomeViaCep);
+    if (!alvo) return null;
+    const match = state.bairros.find((b) => normalizar(b) === alvo);
+    if (match) {
+      const sel = $("#selectBairroUsuario");
+      if (sel) sel.value = match;
+      return match;
+    }
+    return null;
+  }
+
+  // Consulta ViaCEP -> preenche bairro; depois geocodifica (Nominatim/OSM)
+  // para obter lat/lng precisos do endereco.
+  async function onCepLookup() {
+    const cepEl = $("#inputCep");
+    if (!cepEl) return;
+    const cep = cepEl.value.replace(/\D/g, "");
+    if (cep.length !== 8) {
+      if (cep.length > 0) setCepFeedback("CEP incompleto — use 8 dígitos.", "error");
+      return;
+    }
+
+    setCepFeedback("Buscando endereço…", "loading");
+    let endereco;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      endereco = await res.json();
+      if (endereco.erro) {
+        setCepFeedback("CEP não encontrado. Selecione o bairro manualmente.", "error");
+        return;
+      }
+    } catch (err) {
+      setCepFeedback("Não foi possível consultar o CEP agora. Selecione o bairro manualmente.", "error");
+      return;
+    }
+
+    const bairroMatch = selecionarBairro(endereco.bairro);
+
+    // Preenche a rua automaticamente (sem sobrescrever o que o usuario digitou)
+    const ruaEl = $("#inputLogradouro");
+    if (ruaEl && !ruaEl.value.trim()) ruaEl.value = endereco.logradouro || "";
+    const rua = ruaEl ? ruaEl.value.trim() : (endereco.logradouro || "");
+    const numero = ($("#inputNumero")?.value || "").trim();
+
+    const partes = [
+      numero ? `${rua}, ${numero}` : rua,
+      endereco.bairro, endereco.localidade, endereco.uf,
+    ].filter(Boolean).join(", ");
+
+    // Geocodifica o endereco para coordenada precisa (opcional, melhora a rota)
+    let coord = null;
+    try {
+      coord = await geocodificar({ rua, numero, cidade: endereco.localidade, uf: endereco.uf, cep });
+    } catch (err) {
+      console.warn("Geocodificação falhou:", err);
+    }
+
+    if (coord) {
+      state.cadastroLocal = { cep, latitude: coord.lat, longitude: coord.lng };
+      const ondeBairro = bairroMatch
+        ? `Bairro <strong>${bairroMatch}</strong> selecionado.`
+        : `Bairro “${endereco.bairro || "?"}” não está na lista — escolha o mais próximo.`;
+      setCepFeedback("", "ok");
+      const fb = $("#cepFeedback");
+      if (fb) fb.innerHTML =
+        `📍 ${partes || cep} — localização precisa salva. ${ondeBairro}`;
+    } else {
+      // sem coordenada, mas ainda guardamos o CEP
+      state.cadastroLocal = { cep, latitude: null, longitude: null };
+      if (bairroMatch) {
+        setCepFeedback(`Bairro ${bairroMatch} selecionado pelo CEP.`, "ok");
+      } else {
+        setCepFeedback(`Endereço: ${partes || cep}. Selecione o bairro na lista.`, "");
+      }
+    }
+  }
+
+  // Nominatim (OpenStreetMap): tenta pela rua (+numero); cai pro CEP se preciso.
+  async function geocodificar({ rua, numero, cidade, uf, cep }) {
+    const tentativas = [];
+    if (rua) {
+      tentativas.push(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&` +
+        new URLSearchParams({
+          street: numero ? `${numero} ${rua}` : rua,
+          city: cidade || "",
+          state: uf || "",
+          country: "Brasil",
+        })
+      );
+    }
+    tentativas.push(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&` +
+      new URLSearchParams({ postalcode: cep, country: "Brasil" })
+    );
+
+    for (const url of tentativas) {
+      try {
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        const data = await res.json();
+        if (Array.isArray(data) && data.length) {
+          return { lat: Number(data[0].lat), lng: Number(data[0].lon) };
+        }
+      } catch (e) { /* tenta a proxima */ }
+    }
+    return null;
   }
 
   // ============================================================ submit usuario
@@ -158,8 +325,16 @@
       curso: fd.get("curso"),
       universidade: fd.get("universidade"),
       bairro: fd.get("bairro"),
+      cep: (fd.get("cep") || "").replace(/\D/g, "") || null,
+      logradouro: (fd.get("logradouro") || "").trim() || null,
+      numero: (fd.get("numero") || "").trim() || null,
       motorista,
     };
+    // coordenada precisa resolvida pelo CEP (se o CEP no estado bate com o digitado)
+    if (state.cadastroLocal && state.cadastroLocal.cep === payload.cep) {
+      payload.latitude = state.cadastroLocal.latitude;
+      payload.longitude = state.cadastroLocal.longitude;
+    }
     if (motorista) {
       payload.veiculoModelo = fd.get("veiculoModelo");
       payload.veiculoPlaca  = fd.get("veiculoPlaca");
@@ -167,20 +342,79 @@
       payload.veiculoVagas  = Number(fd.get("veiculoVagas")) || 1;
     }
 
+    const editando = !!state.usuario;
     try {
-      const u = await api.criarUsuario(payload);
+      const u = editando
+        ? await api.atualizarUsuario(state.usuario.id, payload)
+        : await api.criarUsuario(payload);
       state.usuario = u;
       localStorage.setItem("usuario", JSON.stringify(u));
       refreshUserChip();
       atualizarStats();
-      fb.textContent = `Conta criada! Você é ${u.motorista ? "motorista" : "passageiro"} no bairro ${u.bairro}. Agora cadastre sua rota.`;
-      e.target.reset();
-      $("#formVeiculo").hidden = true;
-      setTimeout(() => document.querySelector("#rota").scrollIntoView({ behavior: "smooth" }), 600);
+      carregarCaronas();
+
+      if (editando) {
+        const end = u.logradouro
+          ? `${u.logradouro}${u.numero ? ", " + u.numero : ""} - ${u.bairro}`
+          : u.bairro;
+        fb.textContent = u.latitude != null
+          ? `Dados atualizados! Seu endereço (${end}) foi localizado com precisão — a rota da carona agora parte do seu ponto exato.`
+          : `Dados atualizados! Informe o CEP para localizar seu endereço com precisão e melhorar a rota.`;
+        aplicarModoCadastro(); // re-sincroniza o form com os dados salvos
+      } else {
+        fb.textContent = `Conta criada! Você é ${u.motorista ? "motorista" : "passageiro"} no bairro ${u.bairro}. Agora cadastre sua rota.`;
+        aplicarModoCadastro(); // passa para modo "atualizar meus dados"
+        setTimeout(() => document.querySelector("#rota").scrollIntoView({ behavior: "smooth" }), 600);
+      }
     } catch (err) {
       fb.className = "form__feedback error";
-      fb.textContent = "Erro ao criar conta: " + err.message;
+      fb.textContent = `Erro ao ${editando ? "atualizar" : "criar conta"}: ` + err.message;
     }
+  }
+
+  // Pre-preenche o formulario de cadastro com os dados do usuario logado e
+  // muda o botao para "Atualizar meus dados". Sem login, volta ao modo criar.
+  function aplicarModoCadastro() {
+    const f = $("#formUsuario");
+    if (!f) return;
+    const btn = f.querySelector("button[type=submit]");
+    const titulo = $("#cadastroTitulo");
+    const u = state.usuario;
+    if (u) {
+      f.nome.value = u.nome || "";
+      f.email.value = u.email || "";
+      f.curso.value = u.curso || "";
+      if (u.universidade) f.universidade.value = u.universidade;
+      if (u.bairro) f.bairro.value = u.bairro;
+      f.cep.value = u.cep ? formatarCep(u.cep) : "";
+      f.logradouro.value = u.logradouro || "";
+      f.numero.value = u.numero || "";
+      $("#checkMotorista").checked = !!u.motorista;
+      $("#formVeiculo").hidden = !u.motorista;
+      if (u.veiculo) {
+        f.veiculoModelo.value = u.veiculo.modelo || "";
+        f.veiculoPlaca.value  = u.veiculo.placa || "";
+        f.veiculoCor.value    = u.veiculo.cor || "";
+        f.veiculoVagas.value  = u.veiculo.vagas || 3;
+      }
+      // mantem a coordenada salva para reenvio se o CEP nao for re-digitado
+      if (u.latitude != null && u.longitude != null && u.cep) {
+        state.cadastroLocal = {
+          cep: String(u.cep).replace(/\D/g, ""),
+          latitude: u.latitude, longitude: u.longitude,
+        };
+      }
+      if (btn) btn.textContent = "Atualizar meus dados";
+      if (titulo) titulo.textContent = "Meus dados";
+    } else {
+      if (btn) btn.textContent = "Criar conta";
+      if (titulo) titulo.textContent = "Cadastro";
+    }
+  }
+
+  function formatarCep(v) {
+    const d = String(v).replace(/\D/g, "").slice(0, 8);
+    return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
   }
 
   // ============================================================ submit rota
@@ -205,6 +439,7 @@
       const r = await api.criarRota(payload);
       fb.textContent = `Rota salva (#${r.id}) — ${r.bairroOrigem} → ${r.destino} às ${r.horarioSaida.slice(0,5)}.`;
       atualizarStats();
+      carregarCaronas();
       setTimeout(() => document.querySelector("#buscar").scrollIntoView({ behavior: "smooth" }), 500);
     } catch (err) {
       fb.className = "form__feedback error";
@@ -338,6 +573,85 @@
           <div class="match__stars" data-motorista="${m.motorista.id}" title="Avaliar este motorista">
             ${[1,2,3,4,5].map((n) => `<button data-nota="${n}" title="${n} estrelas">★</button>`).join("")}
           </div>
+        </div>
+      </article>
+    `;
+  }
+
+  // ============================================================ todas as caronas
+  async function carregarCaronas() {
+    const root = $("#ridesList");
+    if (!root) return;
+    const universidade = $("#selectUniversidadeCaronas")?.value || "";
+    const tipo = $("#selectTipoCaronas")?.value || "";
+
+    root.innerHTML = `<div class="results__empty fadein">
+      <span class="numeral numeral--ghost">⌛</span>
+      <p>Carregando caronas disponíveis…</p>
+    </div>`;
+
+    try {
+      const [rotas, usuarios] = await Promise.all([
+        api.listarRotas(),
+        api.listarUsuarios(),
+      ]);
+      // indexa motoristas por id (join rota -> usuario)
+      const usuariosPorId = {};
+      usuarios.forEach((u) => { usuariosPorId[u.id] = u; });
+
+      let lista = rotas
+        .map((r) => ({ rota: r, motorista: usuariosPorId[r.usuarioId] }))
+        .filter((x) => x.motorista && x.motorista.motorista); // so caronas de motoristas
+
+      if (universidade) lista = lista.filter((x) => x.rota.destino === universidade);
+      if (tipo) lista = lista.filter((x) => x.rota.tipo === tipo);
+
+      // ordena por universidade, depois horario de saida
+      lista.sort((a, b) => {
+        const d = a.rota.destino.localeCompare(b.rota.destino);
+        if (d !== 0) return d;
+        return a.rota.horarioSaida.localeCompare(b.rota.horarioSaida);
+      });
+
+      if (!lista.length) {
+        root.innerHTML = `<div class="results__empty fadein">
+          <span class="numeral numeral--ghost">◯</span>
+          <p><strong>Nenhuma carona disponível</strong> com esse filtro.</p>
+        </div>`;
+        return;
+      }
+
+      root.innerHTML = lista.map((x, i) => rideCard(x, i + 1)).join("");
+    } catch (err) {
+      root.innerHTML = `<div class="results__empty fadein">
+        <span class="numeral numeral--ghost">!</span>
+        <p>Erro ao carregar caronas: ${escapeHtml(err.message)}</p>
+      </div>`;
+    }
+  }
+
+  function rideCard({ rota, motorista }, rank) {
+    const v = motorista.veiculo || {};
+    const horario = rota.horarioSaida.slice(0, 5);
+    const avaliacao = Number(motorista.avaliacao || 0).toFixed(1);
+    const tipoLabel = rota.tipo === "VOLTA" ? "Volta" : "Ida";
+    return `
+      <article class="match fadein">
+        <div class="match__rank">${rank}.</div>
+        <div class="match__main">
+          <h4>${escapeHtml(motorista.nome)}</h4>
+          <p class="match__sub">${escapeHtml(motorista.curso)} · ${escapeHtml(motorista.universidade)}</p>
+          <div class="match__meta">
+            <span>${iconClock()} ${horario} · ${tipoLabel}</span>
+            <span>${iconCar()} ${escapeHtml(v.modelo || "—")} ${v.cor ? "(" + escapeHtml(v.cor) + ")" : ""}</span>
+            <span>${iconSeat()} ${rota.vagasDisponiveis} vagas</span>
+            <span>${iconStar()} ${avaliacao} (${motorista.totalAvaliacoes || 0})</span>
+          </div>
+          <span class="match__compat">${escapeHtml(rota.bairroOrigem)} → ${escapeHtml(rota.destino)}</span>
+        </div>
+        <div class="match__score">
+          <span class="match__scorenum" style="font-size:1.5rem;">${escapeHtml(rota.destino)}</span>
+          <span class="match__scorelbl">DESTINO</span>
         </div>
       </article>
     `;

@@ -47,7 +47,10 @@ O sistema recebe, para cada usuário:
 
 - Identidade (nome, e-mail, curso)
 - **Bairro de origem**
-- **Universidade de destino**
+- **CEP** (opcional): consultado no ViaCEP para preencher o bairro
+  automaticamente e geocodificado (latitude/longitude) para localizar
+  o endereço com precisão e melhorar o cálculo da rota
+- **Universidade de destino** (UFERSA, UERN, IFRN ou UNP)
 - Papel (motorista ou passageiro)
 - Veículo (se motorista): modelo, placa, cor, **vagas disponíveis**
 
@@ -238,7 +241,12 @@ mais próximos. É o que o frontend desenha no mapa.
 
 Operamos sobre um **GrafoPonderado** (lista de adjacência com pesos),
 onde as arestas têm peso em **km calculados via fórmula de Haversine**
-entre as coordenadas reais dos bairros de Mossoró/RN.
+entre as coordenadas reais dos bairros e das universidades de Mossoró/RN
+(UFERSA, UERN, IFRN e UNP — coordenadas validadas no OpenStreetMap).
+Quando o usuário informa o **CEP** no cadastro, os pontos de **partida**
+(motorista) e de **embarque** (passageiro) usam a coordenada exata do
+endereço geocodificado, em vez do centroide do bairro — deixando a
+distância, o tempo e o traçado no mapa ainda mais precisos.
 
 **Big-O:**
 
@@ -316,11 +324,18 @@ Um **sistema web completo** com:
 ### Funcionalidades
 
 - ✅ Cadastro de usuário (passageiro ou motorista, com dados do veículo)
+- ✅ **Cadastro por CEP**: auto-preenchimento do bairro (ViaCEP) e
+  geocodificação do endereço (lat/lng) para precisão da rota
 - ✅ Cadastro de rota (origem, destino, horário, vagas, ida/volta)
 - ✅ Busca de caronas compatíveis com **ranking por score**
+- ✅ **Listagem de todas as caronas** disponíveis, com filtros por
+  universidade e por tipo (ida/volta)
+- ✅ **Trajeto no mapa** (Dijkstra + Leaflet/OpenStreetMap) com paradas,
+  distância em km, tempo estimado e economia em R$
 - ✅ Avaliação de motoristas (1–5 estrelas)
 - ✅ Estatísticas em tempo real das estruturas (total de usuários, baldes ocupados na hash)
-- ✅ Suporte para múltiplos bairros de Mossoró com **mapa de proximidade** entre eles
+- ✅ Suporte a **4 universidades** (UFERSA, UERN, IFRN, UNP) e a múltiplos
+  bairros de Mossoró com **mapa de proximidade** entre eles
 
 ### Tecnologias
 

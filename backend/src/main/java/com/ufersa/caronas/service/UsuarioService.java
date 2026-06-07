@@ -43,6 +43,31 @@ public class UsuarioService {
         return u;
     }
 
+    /**
+     * Atualiza um usuario ja existente. Se o bairro mudou, re-indexa na
+     * TabelaHash por bairro (remove do balde antigo, adiciona no novo).
+     */
+    public Usuario atualizar(Usuario u, String bairroAntigo) {
+        porId.put(u.getId(), u); // mesma referencia; mantem o indice por id
+        String antigo = normalizar(bairroAntigo);
+        String novo = normalizar(u.getBairro());
+        if (!antigo.equals(novo)) {
+            List<Usuario> listaAntiga = porBairro.get(antigo);
+            if (listaAntiga != null) listaAntiga.removeIf(x -> x.getId().equals(u.getId()));
+            List<Usuario> listaNova = porBairro.get(novo);
+            if (listaNova == null) {
+                listaNova = new ArrayList<>();
+                porBairro.put(novo, listaNova);
+            }
+            boolean existe = false;
+            for (Usuario existente : listaNova) {
+                if (existente.getId().equals(u.getId())) { existe = true; break; }
+            }
+            if (!existe) listaNova.add(u);
+        }
+        return u;
+    }
+
     public Usuario buscarPorId(Long id) {
         return porId.get(id);
     }

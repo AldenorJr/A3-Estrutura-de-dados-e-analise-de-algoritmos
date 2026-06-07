@@ -28,6 +28,7 @@
 
     listarUsuarios: () => request("/api/usuarios"),
     criarUsuario:   (u) => request("/api/usuarios", { method: "POST", body: JSON.stringify(u) }),
+    atualizarUsuario: (id, u) => request(`/api/usuarios/${id}`, { method: "PUT", body: JSON.stringify(u) }),
     buscarUsuario:  (id) => request(`/api/usuarios/${id}`),
     avaliarMotorista: (motoristaId, nota) =>
       request("/api/usuarios/avaliar", {

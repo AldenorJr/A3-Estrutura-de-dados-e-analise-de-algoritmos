@@ -111,6 +111,29 @@ public class SeedDataRunner implements CommandLineRunner {
         passageiro("Camila Torres", "camila@ifrn.edu.br",
                 "Quimica Industrial", "Bom Jardim", "IFRN");
 
+        // ==================================================== UNP (Universidade Potiguar)
+        Usuario fernanda = motorista("Fernanda Albuquerque", "fernanda@unp.br",
+                "Enfermagem", "Centro", "UNP",
+                veiculo("Nissan Versa", "HIJ-6666", "Branco", 4));
+        avaliar(fernanda, 4.9, 4.8, 5.0);
+
+        Usuario bruno = motorista("Bruno Tavares", "bruno@unp.br",
+                "Administracao", "Nova Betania", "UNP",
+                veiculo("Hyundai Creta", "KLM-7777", "Cinza", 4));
+        avaliar(bruno, 4.6, 4.7);
+
+        Usuario patricia = motorista("Patricia Gomes", "patricia@unp.br",
+                "Psicologia", "Alto de Sao Manoel", "UNP",
+                veiculo("Fiat Argo", "NOP-8888", "Vermelho", 3));
+        avaliar(patricia, 4.8, 5.0);
+
+        passageiro("Rodrigo Maia", "rodrigo@unp.br",
+                "Direito", "Doze Anos", "UNP");
+        passageiro("Sabrina Melo", "sabrina@unp.br",
+                "Odontologia", "Centro", "UNP");
+        passageiro("Vitor Hugo", "vitor@unp.br",
+                "Engenharia Civil", "Nova Betania", "UNP");
+
         // ==================================================== Rotas
         // UFERSA - IDA manha
         rota(joao,    "Nova Betania",       "UFERSA", "07:00", 3, TipoRota.IDA);
@@ -154,10 +177,21 @@ public class SeedDataRunner implements CommandLineRunner {
         rota(daniela, "Bom Jardim",         "IFRN",   "12:00", 4, TipoRota.VOLTA);
         rota(otavio,  "Belo Horizonte",     "IFRN",   "22:30", 3, TipoRota.VOLTA);
 
+        // UNP - IDA manha + noite
+        rota(fernanda, "Centro",             "UNP",   "07:10", 4, TipoRota.IDA);
+        rota(bruno,    "Nova Betania",       "UNP",   "07:25", 4, TipoRota.IDA);
+        rota(patricia, "Alto de Sao Manoel", "UNP",   "06:55", 3, TipoRota.IDA);
+        rota(fernanda, "Centro",             "UNP",   "18:40", 4, TipoRota.IDA);   // turno noturno
+        rota(bruno,    "Nova Betania",       "UNP",   "19:05", 4, TipoRota.IDA);
+
+        // UNP - VOLTA
+        rota(patricia, "Alto de Sao Manoel", "UNP",   "12:10", 3, TipoRota.VOLTA);
+        rota(fernanda, "Centro",             "UNP",   "22:40", 4, TipoRota.VOLTA);
+
         System.out.println("===========================================================");
         System.out.println("  Seed concluido: " + usuarioService.total()
                 + " usuarios e " + rotaService.total() + " rotas cadastradas.");
-        System.out.println("  Universidades: UFERSA, UERN, IFRN");
+        System.out.println("  Universidades: UFERSA, UERN, IFRN, UNP");
         System.out.println("  Acesse:  http://localhost:8080/api/usuarios");
         System.out.println("  Bairros: http://localhost:8080/api/bairros");
         System.out.println("===========================================================");
