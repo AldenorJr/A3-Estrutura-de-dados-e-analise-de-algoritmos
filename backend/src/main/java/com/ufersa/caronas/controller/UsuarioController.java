@@ -30,6 +30,9 @@ public class UsuarioController {
         }
         Usuario u = new Usuario(dto.nome, dto.email, dto.curso, dto.bairro,
                 dto.universidade, dto.motorista, v);
+        u.setCep(dto.cep);
+        u.setLatitude(dto.latitude);
+        u.setLongitude(dto.longitude);
         return ResponseEntity.ok(usuarioService.salvar(u));
     }
 

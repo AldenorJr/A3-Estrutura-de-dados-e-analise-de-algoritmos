@@ -52,7 +52,9 @@ Abra o sistema (já com o backend rodando e o seed carregado):
 
 1. Mostre a tela inicial (visual diferenciado, estética "Mossoró").
 2. Vá ao **Cadastro** e crie um usuário rápido como passageiro:
-   - Bairro: **Aeroporto**
+   - Digite um **CEP** de Mossoró e mostre o bairro sendo preenchido
+     automaticamente (ViaCEP) e o endereço localizado com precisão
+     (geocodificação) — "é isso que melhora a rota da carona".
 3. Cadastre uma **rota** desse usuário com horário **07:15**.
 4. Vá em **Buscar carona** e busque com horário **07:15**.
 5. Mostre os resultados: 3+ matches ordenados por score, com
@@ -60,6 +62,10 @@ Abra o sistema (já com o backend rodando e o seed carregado):
    compatibilidade explicada em texto.
 6. **Aponte para os badges HASH / GRAFO / QUICKSORT** no resultado
    e diga: "Cada match passou por essas três etapas".
+7. Abra **"Ver trajeto no mapa"** num match para mostrar o Dijkstra
+   desenhando o caminho motorista → você → universidade.
+8. Vá em **Todas as caronas** e filtre por universidade (UFERSA, UERN,
+   IFRN ou UNP) e por tipo (ida/volta) para mostrar a base completa.
 
 ---
 
@@ -119,13 +125,13 @@ Mostre o endpoint `/api/usuarios/stats` rodando ao vivo:
 
 ```json
 {
-  "totalUsuarios": 9,
-  "totalBairros": 7,
-  "baldesOcupadosNoIndiceBairro": 6
+  "totalUsuarios": 27,
+  "totalBairros": 9,
+  "baldesOcupadosNoIndiceBairro": 7
 }
 ```
 
-> "Com 7 chaves diferentes ocupando 6 baldes (em 16 disponíveis),
+> "Com 9 chaves diferentes ocupando 7 baldes (em 16 disponíveis),
 > nossa função hash distribui bem — quase sem colisões."
 
 ---

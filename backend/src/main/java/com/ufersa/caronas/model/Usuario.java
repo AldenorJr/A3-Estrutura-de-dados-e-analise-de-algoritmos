@@ -10,6 +10,9 @@ public class Usuario {
     private String email;
     private String curso;
     private String bairro;
+    private String cep;            // CEP do endereco (opcional)
+    private Double latitude;       // coordenada precisa do endereco (geocodificada via CEP)
+    private Double longitude;
     private String universidade;
     private boolean motorista;
     private double avaliacao; // 0.0 a 5.0
@@ -48,6 +51,20 @@ public class Usuario {
 
     public String getBairro() { return bairro; }
     public void setBairro(String bairro) { this.bairro = bairro; }
+
+    public String getCep() { return cep; }
+    public void setCep(String cep) { this.cep = cep; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    /** True quando o usuario tem coordenada precisa (geocodificada pelo CEP). */
+    public boolean temCoordenadaPrecisa() {
+        return latitude != null && longitude != null;
+    }
 
     public String getUniversidade() { return universidade; }
     public void setUniversidade(String universidade) { this.universidade = universidade; }
